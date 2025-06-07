@@ -11,5 +11,5 @@ TRIP_DURATION_DAYS=$1
 MILES_TRAVELED=$2
 TOTAL_RECEIPTS_AMOUNT=$3
 
-# Call the python script to calculate the reimbursement
+# Use the new ensemble model for improved accuracy
 python3 calculate.py "$TRIP_DURATION_DAYS" "$MILES_TRAVELED" "$TOTAL_RECEIPTS_AMOUNT" 

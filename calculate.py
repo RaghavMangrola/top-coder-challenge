@@ -5,9 +5,14 @@ from sklearn.model_selection import train_test_split
 import joblib
 import sys
 import os
+import numpy as np
 
-MAIN_MODEL_FILE = 'main_model.joblib'
-OUTLIER_MODEL_FILE = 'outlier_model.joblib'
+# Ensemble configuration
+ENSEMBLE_SIZE = 5
+MAIN_MODEL_FILES = [f'ensemble_main_{i}.joblib' for i in range(ENSEMBLE_SIZE)]
+OUTLIER_MODEL_FILES = [f'ensemble_outlier_{i}.joblib' for i in range(ENSEMBLE_SIZE)]
+RANDOM_SEEDS = [42, 123, 456, 789, 999]  # Different seeds for ensemble diversity
+
 DATA_FILE = 'public_cases.json'
 OUTLIER_THRESHOLD = 1400
 
@@ -84,9 +89,9 @@ def feature_engineering(df):
 def train_model():
     """
     Loads data, engineers features, splits data into main and outlier sets,
-    trains two separate Decision Tree Regressors, and saves them.
+    trains ensemble of Decision Tree Regressors with different random seeds, and saves them.
     """
-    print("Training main and outlier models...", file=sys.stderr)
+    print("Training ensemble of main and outlier models...", file=sys.stderr)
     with open(DATA_FILE, 'r') as f:
         data = json.load(f)
 
@@ -112,30 +117,43 @@ def train_model():
     X_outlier = outlier_features
     y_outlier = outlier_df['expected_reimbursement']
 
-    # Train and save the main model
-    main_model = DecisionTreeRegressor(random_state=42, max_depth=12, min_samples_leaf=3)
-    main_model.fit(X_main, y_main)
-    joblib.dump(main_model, MAIN_MODEL_FILE)
-    print(f"Main model trained and saved to {MAIN_MODEL_FILE}", file=sys.stderr)
+    # Train ensemble of main models
+    print(f"Training {ENSEMBLE_SIZE} main models...", file=sys.stderr)
+    for i, seed in enumerate(RANDOM_SEEDS):
+        main_model = DecisionTreeRegressor(random_state=seed, max_depth=12, min_samples_leaf=3)
+        main_model.fit(X_main, y_main)
+        joblib.dump(main_model, MAIN_MODEL_FILES[i])
+        print(f"Main model {i+1}/{ENSEMBLE_SIZE} trained with seed {seed}", file=sys.stderr)
 
-    # Train and save the outlier model
-    outlier_model = DecisionTreeRegressor(random_state=42, max_depth=8, min_samples_leaf=2) # Different params for smaller dataset
-    outlier_model.fit(X_outlier, y_outlier)
-    joblib.dump(outlier_model, OUTLIER_MODEL_FILE)
-    print(f"Outlier model trained and saved to {OUTLIER_MODEL_FILE}", file=sys.stderr)
+    # Train ensemble of outlier models
+    print(f"Training {ENSEMBLE_SIZE} outlier models...", file=sys.stderr)
+    for i, seed in enumerate(RANDOM_SEEDS):
+        outlier_model = DecisionTreeRegressor(random_state=seed, max_depth=8, min_samples_leaf=2)
+        outlier_model.fit(X_outlier, y_outlier)
+        joblib.dump(outlier_model, OUTLIER_MODEL_FILES[i])
+        print(f"Outlier model {i+1}/{ENSEMBLE_SIZE} trained with seed {seed}", file=sys.stderr)
+
+    print("Ensemble training complete!", file=sys.stderr)
 
 def predict(days, miles, receipts):
     """
-    Loads the appropriate trained model based on receipt amount and makes a prediction.
+    Loads the appropriate ensemble of trained models and makes averaged prediction.
     """
-    if not os.path.exists(MAIN_MODEL_FILE) or not os.path.exists(OUTLIER_MODEL_FILE):
+    # Check if any ensemble models exist
+    main_models_exist = all(os.path.exists(f) for f in MAIN_MODEL_FILES)
+    outlier_models_exist = all(os.path.exists(f) for f in OUTLIER_MODEL_FILES)
+    
+    if not main_models_exist or not outlier_models_exist:
         train_model()
-        
-    # Decide which model to use
+    
+    # Decide which ensemble to use
     if receipts > OUTLIER_THRESHOLD:
-        model = joblib.load(OUTLIER_MODEL_FILE)
+        model_files = OUTLIER_MODEL_FILES
     else:
-        model = joblib.load(MAIN_MODEL_FILE)
+        model_files = MAIN_MODEL_FILES
+    
+    # Load ensemble models
+    models = [joblib.load(f) for f in model_files]
     
     # Create a DataFrame for the input
     input_data = {
@@ -148,13 +166,18 @@ def predict(days, miles, receipts):
     # Apply the same feature engineering
     input_features = feature_engineering(input_df)
     
-    # Ensure columns match the training set
-    # (This is a simple way to handle it for this problem)
-    training_cols = model.feature_names_in_
-    input_features = input_features.reindex(columns=training_cols, fill_value=0)
-
-    prediction = model.predict(input_features)
-    print(f"{prediction[0]:.2f}")
+    # Make predictions with all models in ensemble
+    predictions = []
+    for model in models:
+        # Ensure columns match the training set
+        training_cols = model.feature_names_in_
+        model_features = input_features.reindex(columns=training_cols, fill_value=0)
+        pred = model.predict(model_features)[0]
+        predictions.append(pred)
+    
+    # Average the ensemble predictions
+    ensemble_prediction = np.mean(predictions)
+    print(f"{ensemble_prediction:.2f}")
 
 
 if __name__ == '__main__':
