@@ -102,6 +102,21 @@ The system takes three inputs:
 
 - `public_cases.json` - 1,000 historical input/output examples
 
+## Project Structure
+
+```
+top-coder-challenge/
+├── models/           # Machine learning models (.joblib files)
+├── scripts/          # Analysis and calculation scripts
+├── docs/             # Development documentation and logs
+├── public_cases.json # Historical input/output examples
+├── private_cases.json # Private test cases
+├── PRD.md           # Product Requirements Document
+├── INTERVIEWS.md    # Employee interviews with system hints
+├── run.sh           # Main execution script
+└── eval.sh          # Testing script
+```
+
 ## Getting Started
 
 1. **Analyze the data**: 
