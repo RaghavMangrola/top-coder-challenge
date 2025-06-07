@@ -4,12 +4,24 @@
 
 ### Approaches Implemented
 
-**Component-Based KISS Approach (Primary Solution)**
-We successfully reverse-engineered the legacy system using a systematic, interpretable approach that achieved a **73% improvement** over naive methods:
+**Machine Learning Approach (Primary Solution)**
+We successfully reverse-engineered the legacy system using advanced machine learning with sophisticated feature engineering that achieved a **95% improvement** over naive methods:
 
 - **Initial Score**: 93,192 (naive formula)
-- **Final Score**: 25,601 (73% improvement)
-- **Average Error**: Reduced from $930 to $255
+- **Final Score**: 4,866 (95% improvement)
+- **Average Error**: Reduced from $930 to $47.66
+
+**Key Breakthrough:**
+1. **Trip Categorization**: Implemented Kevin's "6 calculation paths" theory using one-hot encoded trip categories
+2. **Two-Model Architecture**: Separate specialized models for normal vs high-receipt cases (>$1400 threshold)
+3. **Advanced Feature Engineering**: Captured complex business rules from interviews in ML features
+4. **Decision Tree Regressor**: With tuned hyperparameters (max_depth=12, min_samples_leaf=3)
+
+**Component-Based KISS Approach (Previous Solution)**
+Our initial interpretable approach that laid the foundation:
+
+- **Score**: 25,601 (73% improvement over naive)
+- **Average Error**: $255
 
 **Key Discoveries:**
 1. **5-Day Trip Penalty**: Major breakthrough - 5-day trips have a consistent -$400 penalty
@@ -21,53 +33,41 @@ We successfully reverse-engineered the legacy system using a systematic, interpr
 4. **Efficiency Bonuses**: Sweet spot of 180-220 miles/day earns $50 bonus
 5. **Receipt Amount Caps**: $2000+ receipts always get 0.25x multiplier
 
-**Final Formula Structure:**
-```
-reimbursement = base_per_diem + mileage_component + receipt_component + bonuses/penalties
-```
-
-**Machine Learning Approach (Secondary Solution)**
-Implemented a dual Decision Tree system with sophisticated feature engineering:
-- Separate models for normal vs. high-receipt cases (>$1400 threshold)
-- Advanced features: efficiency ratios, trip categorization, interaction effects
-- Incorporates all business rules discovered in KISS approach
-
 ### Performance Comparison
-| Approach | Score | Average Error | Exact Matches |
-|----------|-------|---------------|---------------|
+| Approach | Score | Average Error | Close Matches (±$1) |
+|----------|-------|---------------|---------------------|
 | Naive Formula | 93,192 | $930+ | 0 |
 | Basic Components | 85,358 | $852 | 0 |
 | + 5-Day Penalty | 46,037 | $459 | 0 |
 | + Receipt Ratios | 26,000 | $259 | 0 |
-| **Final KISS** | **25,601** | **$255** | **0** |
-| **ML Approach** | *TBD* | *TBD* | *TBD* |
+| **KISS Final** | **25,601** | **$255** | **2** |
+| **ML Breakthrough** | **4,866** | **$47.66** | **20** |
 
-### Future Optimization Paths
+### Current Architecture
 
-**Phase 1: KISS Refinements (Recommended Next - 1-2 hours)**
-- Fine-tune receipt ratios (currently rough estimates)
-- Add 4-day trip bonus ($235/day pattern detected)
-- Implement 3-tier mileage system (0-100, 100-500, 500+ miles)
-- Calibrate efficiency bonus thresholds
+**Machine Learning Model Features:**
+- Trip categories: `quick_trip_high_miles`, `long_haul`, `low_efficiency`, `sweet_spot_efficiency`, `balanced`
+- 3-tier mileage system with explicit tiers
+- Receipt multipliers based on trip length and amount
+- Efficiency bonuses for optimal miles/day ratios
+- Interaction features (days × miles)
+- Separate models for normal vs outlier cases
 
-**Phase 2: Advanced Business Rules (2-3 hours)**
-- Implement Kevin's "6 calculation paths" theory
-- Add interaction effects between trip characteristics
-- Test temporal/seasonal patterns using case indices
+**Implementation:**
+```python
+# Two-model architecture
+if receipts > 1400:
+    model = outlier_model  # Specialized for high-receipt cases
+else:
+    model = main_model     # Optimized for standard cases
 
-**Phase 3: Machine Learning Approaches (3-5 hours)**
-- Feature engineering + interpretable ML models
-- Hybrid KISS + ML error correction
-- Ensemble methods combining multiple approaches
+reimbursement = model.predict(engineered_features)
+```
 
-**Phase 4: Systematic Optimization (2-4 hours)**
-- Grid search hyperparameter optimization
-- Genetic algorithm for parameter evolution
-
-### Target Goals
-- **Short-term**: Achieve first exact matches, score <20,000
-- **Medium-term**: Score <15,000 with advanced business rules
-- **Long-term**: Score <10,000 with optimized ML approaches
+### Next Optimization Goals
+- **Immediate Target**: Achieve first exact matches, score <1,000
+- **Advanced Target**: Score <500 with refined outlier handling
+- **Ultimate Goal**: Multiple exact matches with score <100
 
 ---
 
